@@ -147,6 +147,7 @@ if __name__ == "__main__":
     parser.add_argument('-logfileaddress', type=str, help='LogFile path and name.', choices=['right', 'left'], default=default_logfile_address)
     
     args = parser.parse_args(sys.argv[1:])
-    OP = Optimization_Pipeline (args) ;
+    OP = Optimization_Pipeline (args) 
+    OP.Run_Optimization_Pipeline()
     OP.__exit__()
 
