@@ -126,7 +126,7 @@ class Optimization_Pipeline ():
         MSG.append(GF.NVLR ('Test data'      , 40) + ": " + self.PARAMS["test_filename"])
         MSG.append(GF.NVLR ('Test size'      , 40) + ": " + str(test_data_size))
         MSG.append("")
-    
+        self.lp (MSG)
     def Run_Optimization_Pipeline(self):
         self.__LoadData__()
 
