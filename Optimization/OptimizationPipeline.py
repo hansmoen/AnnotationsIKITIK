@@ -100,11 +100,11 @@ class Optimization_Pipeline ():
         else:
             X_used_row_len = X_data_max_row_len
         # ----------------------------------
-        train_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
+        train_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=self.args.padding_side)
         # ----------------------------------
-        devel_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
+        devel_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=self.args.padding_side)
         # ----------------------------------
-        test_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
+        test_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=self.args.padding_side)
         # ----------------------------------
         train_data_size = train_data_obj.get_size()
         devel_data_size = devel_data_obj.get_size()
