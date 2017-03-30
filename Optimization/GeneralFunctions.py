@@ -26,3 +26,7 @@ def NVLL (S, Cnt):
         return (" " * (Cnt - len(S))) + str(S) ;
     else:
         return S[0:Cnt]
+
+def f_round(number, NP=3):
+    NP = str(NP)
+    return ('{:.' + NP + 'f}').format (number)

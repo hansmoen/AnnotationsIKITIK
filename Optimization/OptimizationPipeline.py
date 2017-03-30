@@ -1,10 +1,13 @@
 import os,sys,inspect,argparse,collections ; 
 
 import GeneralFunctions as GF ; 
+import Architectures as ARCHITECTURES 
 from data4keras import X_y_dataHandler
 
 class Optimization_Pipeline ():
     def __init__ (self, args):
+        self.global_devel_pred_metric = [] 
+
         self.args = args 
         self._LogFileHandler = open (args.logfileaddress, "wt")
         self.lp ("Program started ...") 
@@ -127,9 +130,107 @@ class Optimization_Pipeline ():
         MSG.append(GF.NVLR ('Test size'      , 40) + ": " + str(test_data_size))
         MSG.append("")
         self.lp (MSG)
-    def Run_Optimization_Pipeline(self):
-        self.__LoadData__()
 
+        self.train_data_obj = train_data_obj
+        self.devel_data_obj = devel_data_obj
+        self.test_data_obj  = test_data_obj
+
+        self.PARAMS["X_word_max_value" ]  = X_word_max_value
+        self.PARAMS["X_lemma_max_value"]  = X_lemma_max_value
+        self.PARAMS["X_pos_max_value"  ]  = X_pos_max_value
+        self.PARAMS["X_used_row_len"   ]  = X_used_row_len
+        self.PARAMS["y_max_value"      ]  = y_max_value       
+    
+    def __train__(self):
+        ANN_INPUT  = []
+        ANN_OUTPUT = self.train_data_obj.get_y_n_hot_np_array()
+        
+        if self.__WhichFeaturesToUse["words"] == True:
+            ANN_INPUT.append (self.train_data_obj.get_X_word_np_array())
+            
+        if self.__WhichFeaturesToUse["lemmas"] == True:
+            ANN_INPUT.append (self.train_data_obj.get_X_lemma_np_array())
+
+        if self.__WhichFeaturesToUse["postgs"] == True:
+            ANN_INPUT.append (self.train_data_obj.get_X_pos_np_array())
+        
+        H = self.__model.fit(ANN_INPUT,ANN_OUTPUT, batch_size= self.args.batch_size, nb_epoch=1, verbose=self.args.fit_verbose, shuffle=False)
+        #self.lp ("Training loss: " + str(H.history)); 
+        #self.TrainMetricLog.append (H)
+
+    def __predict__(self):
+        ANN_INPUT  = []
+        
+        if self.__WhichFeaturesToUse["words"] == True:
+            ANN_INPUT.append (self.devel_data_obj.get_X_word_np_array())
+            
+        if self.__WhichFeaturesToUse["lemmas"] == True:
+            ANN_INPUT.append (self.devel_data_obj.get_X_lemma_np_array())
+
+        if self.__WhichFeaturesToUse["postgs"] == True:
+            ANN_INPUT.append (self.devel_data_obj.get_X_pos_np_array())
+        
+        return self.__model.predict (ANN_INPUT)
+
+    def __evaluate__(self, PRED):
+        import numpy as np
+        from sklearn.metrics import f1_score
+
+        true_threshold = 0.5
+        y_predicted_np_array = PRED 
+
+        bool_predicted_np_array = np.zeros(y_predicted_np_array.shape, dtype=np.int32)
+        for i in range(0, y_predicted_np_array.shape[0]):
+            for j in range (0, y_predicted_np_array.shape[1]):
+                if y_predicted_np_array[i, j] >= true_threshold:
+                    bool_predicted_np_array[i, j] = 1
+    
+        assert bool_predicted_np_array.shape == self.devel_data_obj.get_y_n_hot_np_array().shape
+    
+        f1_macro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
+        f1_micro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
+        f1_weighted = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
+        f1_sample   = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='sample')
+        
+        self.PredMetricLog.append ([f1_macro,f1_micro,f1_weighted,f1_sample])
+        
+        MSG = self.CurrentArchName 
+        MSG += "\tEpoch: "+str(self.EpochNoCntr)
+        MSG += "\tf1-macro: " + GF.f_round(f1_macro)
+        MSG += "\tf1-micro: " + GF.f_round(f1_micro)
+        MSG += "\tf1-weighted: " + GF.f_round(f1_weighted)
+        MSG += "\tf1_sample: "   + GF.f_round(f1_sample)
+        print MSG 
+        
+        """
+        f1_score_class_list = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average=None)
+        for i_class, class_f1_score in enumerate(f1_score_class_list):
+            print('\t' + str(i_class + 1) + ': ' + str(class_f1_score))
+        """
+    def Run_Optimization_Pipeline(self, Archictectures):
+        self.__LoadData__()
+        for arch in Archictectures:
+            #1-Reset Evaluation 
+            self.TrainMetricLog = [] 
+            self.PredMetricLog = []
+            self.CurrentArchName = arch 
+            
+            #1-Build model
+            ARCBuilder = ARCHITECTURES.ANN_Architecture_Builder (self.PARAMS , self.lp , self.PROGRAM_Halt) ; 
+            self.__model , self.__WhichFeaturesToUse = eval ("ARCBuilder." + arch);
+            
+            #2-Compile model             
+            self.lp ("-"*30 + " COMPILING MODEL:" + arch)
+            self.__model.compile (loss="binary_crossentropy", optimizer="adam") ; 
+            self.lp ("-"*30 + " DONE MODEL BUILDING " + "-" *30) 
+            
+            for EpochNo in range(self.args.nb_epoch):
+                self.EpochNoCntr = EpochNo + 1 #when we train for 1 epoch, this should be 1
+                
+                self.__train__() 
+                PRED = self.__predict__()
+                self.__evaluate__(PRED)
+                
 if __name__ == "__main__":
     default_logfile_address =os.path.dirname(os.path.realpath(__file__))+"/LOGS/"+GF.DATETIME_GetNowStr()+".txt"
     parser = argparse.ArgumentParser(description='keras_4_annotations.py')
@@ -148,6 +249,20 @@ if __name__ == "__main__":
     
     args = parser.parse_args(sys.argv[1:])
     OP = Optimization_Pipeline (args) 
-    OP.Run_Optimization_Pipeline()
+
+    Archs = [] 
+    for vd in range(50,301,50):
+        for lsd in range(50,301,50):
+            for dv in [0.1,0.2,0.3,0.4,0.5]:
+                arch = "Hans_1 ({" 
+                arch+= "'wed':"+str(vd)+","
+                arch+= "'led':"+str(vd)+","
+                arch+= "'ped':"+str(vd)+","
+                arch+= "'lsd':"+str(lsd)+","
+                arch+= "'dw' :"+str(dv)+","
+                arch+= "'du' :"+str(dv)+"}"
+                arch+= ")" 
+                Archs.append (arch)
+    OP.Run_Optimization_Pipeline(Archs)
     OP.__exit__()
 
