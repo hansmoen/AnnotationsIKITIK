@@ -190,16 +190,16 @@ class Optimization_Pipeline ():
         f1_macro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
         f1_micro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
         f1_weighted = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
-        f1_sample   = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='sample')
+        f1_samples  = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
         
-        self.PredMetricLog.append ([f1_macro,f1_micro,f1_weighted,f1_sample])
+        self.PredMetricLog.append ([f1_macro,f1_micro,f1_weighted,f1_samples])
         
         MSG = self.CurrentArchName 
         MSG += "\tEpoch: "+str(self.EpochNoCntr)
         MSG += "\tf1-macro: " + GF.f_round(f1_macro)
         MSG += "\tf1-micro: " + GF.f_round(f1_micro)
         MSG += "\tf1-weighted: " + GF.f_round(f1_weighted)
-        MSG += "\tf1_sample: "   + GF.f_round(f1_sample)
+        MSG += "\tf1_samples: "   + GF.f_round(f1_samples)
         print MSG 
         
         """

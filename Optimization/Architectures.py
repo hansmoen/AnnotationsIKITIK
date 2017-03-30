@@ -10,7 +10,7 @@ class ANN_Architecture_Builder:
         self.WhichFeaturesToUse["lemmas"] = False 
         self.WhichFeaturesToUse["postgs"] = False 
         
-    def Hans_1 (self,hyper_params):
+    def Hans_1(self,hyper_params):
         #<<<CRITICAL>>> : Setting np random seed everytime BEFORE IMPORTING FROM KERAS!
         self.lp ("Building Neural Network Model. RandomSeed:" + str(self.RandomSeed) + "  , Please wait ..."); 
         import numpy as np ; 
