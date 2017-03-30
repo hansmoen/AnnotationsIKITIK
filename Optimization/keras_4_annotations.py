@@ -25,7 +25,6 @@ import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import w2v_handler
-from data4keras import X_y_dataHandler
 
 class MyFileLog(Callback):
     '''
@@ -79,97 +78,21 @@ class MyFileLog(Callback):
             f.write(string)
 
 
-if __name__ == "__main__":
-    ####################################%%%%%%%%%%%%%%%%%%%%%
-    parser = argparse.ArgumentParser(description='keras_4_annotations.py')
-
-    ## LOCAL TESTING ###################%%%%%%%%%%%%%%%%%%%%%
-    parser.add_argument('-data_folder', type=str, help='Location of the data folder', default='data')
-    parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], default='kipu')
-    parser.add_argument('-ann_type', type=str, help='Train on sentence or document level, choices={"sent", "doc"}', choices=['sent', 'doc'], default='sent')
-    parser.add_argument('-save_folder', type=str, help='A new folder with model and log file will be created here.', default='models')
-    parser.add_argument('-word_embeddings', type=str, help='Filename of the pre-created word embeddings to use for the X data.', default=None)
-    parser.add_argument('-lemma_embeddings', type=str, help='Filename of the pre-created lemma embeddings to use for the X data.', default=None)
-    parser.add_argument('-pos_embeddings', type=str, help='Filename of the pre-created pos embeddings to use for the X data.', default=None)
-    parser.add_argument('-normalize_embeddings', type=int, help='Wether or not to normalize the loaded pre-created word embeddings; default=1 (True)', choices=[0, 1], default=1)
-    parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
-    parser.add_argument('-nb_epoch', type=int, help='Number of epochs, default=5', default=5)
-    parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
-    parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
-    ####################################%%%%%%%%%%%%%%%%%%%%%
-    """
-    ## EVEX RUN ########################%%%%%%%%%%%%%%%%%%%%%
-    parser.add_argument('-data_folder', type=str, help='Location of the data folder', default='/home/hanmoe/text-classification/annotation/DATA')
-    parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], required=True)
-    parser.add_argument('-ann_type', type=str, help='Train on sentence or document level, choices={"sent", "doc"}', choices=['sent', 'doc'], required=True)
-    parser.add_argument('-save_folder', type=str, help='A new folder with model and log file will be created here.', default='MODELS')
-    parser.add_argument('-word_embeddings', type=str, help='Filename of the pre-created word embeddings to use for the X data.', default=None)
-    parser.add_argument('-lemma_embeddings', type=str, help='Filename of the pre-created lemma embeddings to use for the X data.', default=None)
-    parser.add_argument('-pos_embeddings', type=str, help='Filename of the pre-created pos embeddings to use for the X data.', default=None)
-    parser.add_argument('-normalize_embeddings', type=int, help='Wether or not to normalize the loaded pre-created word embeddings; default=1 (True)', choices=[0, 1], default=1)
-    parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
-    parser.add_argument('-nb_epoch', type=int, help='Number of epochs, default=10', default=10)
-    parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
-    parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
-    ####################################%%%%%%%%%%%%%%%%%%%%%
-    """
-    args = parser.parse_args(sys.argv[1:])
-
-    print("Start ... ")
-
-    train_filename = args.data_folder + '/' + args.ann_set + '/' + args.ann_type + '/' + args.ann_type + '-train-annotations.txt'
-    devel_filename = args.data_folder + '/' + args.ann_set + '/' + args.ann_type + '/' + args.ann_type + '-devel-annotations.txt'
-    test_filename = args.data_folder + '/' + args.ann_set + '/' + args.ann_type + '/' + args.ann_type + '-test-annotations.txt'
-
     #################################
     X_lower_row_len = 1 # Lower text length threshold
     X_upper_row_len = 400 # Upper text length threshold
     X_used_row_len = -1
-    default_embeddings_dim = 300  # default size of the used word embeddings when no pre-created embeddings model is given
+
     word_embeddings_dim = lemma_embeddings_dim = pos_embeddings_dim = default_embeddings_dim
     lstm_out_dim = 300  # embeddings_dim
+
     #################################
 
 
-    dtm_start = datetime.now()
-    dtm_start_string = ('%s %02d:%02d:%02d' % (str(dtm_start.date()), dtm_start.hour, dtm_start.minute, dtm_start.second))
-
-    word_embeddings_model = None
-    lemma_embeddings_model = None
-    pos_embeddings_model = None
-    embeddings_used_string = 'False'
-    if args.word_embeddings and args.lemma_embeddings and args.pos_embeddings:
-        # FOR GUIDE ON WORD VECTORS, SEE: https://github.com/fchollet/keras/issues/853
-        print('Loading pre-created embedding models to use as weights ... ')
-
-        try:
-            word_embeddings_model = w2v_handler.W2vModel()
-            word_embeddings_model.load_w2v_model(args.word_embeddings, binary=True)
-            word_embeddings_dim = word_embeddings_model.get_dim()
-
-            lemma_embeddings_model = w2v_handler.W2vModel()
-            lemma_embeddings_model.load_w2v_model(args.lemma_embeddings, binary=True)
-            lemma_embeddings_dim = lemma_embeddings_model.get_dim()
-
-            pos_embeddings_model = w2v_handler.W2vModel()
-            pos_embeddings_model.load_w2v_model(args.pos_embeddings, binary=True)
-            pos_embeddings_dim = pos_embeddings_model.get_dim()
-
-            embeddings_used_string = 'True'
-
-            if (args.normalize_embeddings):
-                embeddings_used_string += '_norm'
-        except:
-            print('No embeddings model found in: ' + args.embeddings + '\nStopping the run!')
-            sys.exit(-1)
-
-            word_embeddings_model = lemma_embeddings_model = pos_embeddings_model = None
-            embeddings_used_string = 'False'
-            word_embeddings_dim = lemma_embeddings_dim = pos_embeddings_dim = default_embeddings_dim
 
     # lstm_output_layer_size = embeddings_dim  # Same as its input, OK?
 
-    run_name = args.ann_set + '-' + args.ann_type + '-batch_size' + str(args.batch_size) + '-nb_epoch' + str(args.nb_epoch) + '-pre_embeddings' + embeddings_used_string
+    run_name = args.ann_set + '-' + args.ann_type + 
     # run_name = ('%s-%02d_%02d_%02d' % (str(dtm_start.date()).replace("-", "_"), dtm_start.hour, dtm_start.minute, dtm_start.second))
 
 
@@ -187,80 +110,7 @@ if __name__ == "__main__":
 
 
 
-    # Get information about the data set
-    print('Fetching information about the data set ... ')
 
-    # ----------------------------------
-    train_data_obj = X_y_dataHandler()
-    train_data_obj.load_data_set(train_filename)
-    # ----------------------------------
-    devel_data_obj = X_y_dataHandler()
-    devel_data_obj.load_data_set(devel_filename)
-    # ----------------------------------
-    test_data_obj = X_y_dataHandler()
-    test_data_obj.load_data_set(test_filename)
-    # ----------------------------------
-    X_word_max_value = max([train_data_obj.get_X_max_word_value(), devel_data_obj.get_X_max_word_value(), test_data_obj.get_X_max_word_value()])
-    X_lemma_max_value = max([train_data_obj.get_X_max_lemma_value(), devel_data_obj.get_X_max_lemma_value(), test_data_obj.get_X_max_lemma_value()])
-    X_pos_max_value = max([train_data_obj.get_X_max_pos_value(), devel_data_obj.get_X_max_pos_value(), test_data_obj.get_X_max_pos_value()])
-    y_max_value = max([train_data_obj.get_y_max_value(), devel_data_obj.get_y_max_value(), test_data_obj.get_y_max_value()])
-    # ----------------------------------
-    X_data_max_row_len = max([train_data_obj.get_X_max_len(), devel_data_obj.get_X_max_len(), test_data_obj.get_X_max_len()])
-    if X_data_max_row_len <= X_lower_row_len:
-        X_used_row_len = X_lower_row_len
-    elif X_data_max_row_len >= X_upper_row_len:
-        X_used_row_len = X_upper_row_len
-    else:
-        X_used_row_len = X_data_max_row_len
-    # ----------------------------------
-    train_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
-    # ----------------------------------
-    devel_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
-    # ----------------------------------
-    test_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
-    # ----------------------------------
-    train_data_size = train_data_obj.get_size()
-    devel_data_size = devel_data_obj.get_size()
-    test_data_size = test_data_obj.get_size()
-
-    print('X_words_max_value:', X_word_max_value)
-    print('X_lemma_max_value:', X_lemma_max_value)
-    print('X_pos_max_value:', X_pos_max_value)
-    print('X_used_row_length:', X_used_row_len)
-    print('X_data_max_row_len:', X_data_max_row_len)
-    print('y_max_value:', y_max_value)
-    print('train_data_size:', train_data_size)
-    print('devel_data_size:', devel_data_size)
-    print('test_data_size:', test_data_size)
-    print('padding_side:', args.padding_side)
-
-
-    ###########################################################
-    # Log stuff ###############################################
-    file_log = MyFileLog(run_save_folder + '/log-' + run_name + '.txt')
-    file_log.append('Run started: %s' % (dtm_start_string))
-
-    file_log.append('\n\nX word max value: %i' % (X_word_max_value))
-    file_log.append('\nX lemma max value: %i' % (X_lemma_max_value))
-    file_log.append('\nX pos max value: %i' % (X_pos_max_value))
-    file_log.append('\nX used row length: %i' % (X_used_row_len))
-    file_log.append('\nX max row length: %i' % (X_data_max_row_len))
-    file_log.append('\ny max value: %i' % (y_max_value))
-    file_log.append('\ny padding side: %s' % (args.padding_side))
-
-    file_log.append('\n\nTrain data: %s' % (train_filename))
-    file_log.append('\n\tsize: %s' % (train_data_size))
-
-    file_log.append('\nDevel data: %s' % (devel_filename))
-    file_log.append('\n\tsize: %s' % (devel_data_size))
-
-    file_log.append('\nTest data: %s' % (test_filename))
-    file_log.append('\n\tsize: %s' % (test_data_size))
-
-    file_log.append('\n\nBatch size: %s' % (args.batch_size))
-    file_log.append('\nEpochs: %s' % (args.nb_epoch))
-    file_log.append('\nUsing pre-created word embeddings: %s' % (embeddings_used_string))
-    file_log.append('\n\n')
     ###########################################################
 
     # == Word =================================================
