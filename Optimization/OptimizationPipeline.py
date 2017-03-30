@@ -127,6 +127,8 @@ class Optimization_Pipeline ():
         MSG.append(GF.NVLR ('Test size'      , 40) + ": " + str(test_data_size))
         MSG.append("")
     
+    def Run_Optimization_Pipeline(self):
+        self.__LoadData__()
 
 if __name__ == "__main__":
     default_logfile_address =os.path.dirname(os.path.realpath(__file__))+"/LOGS/"+GF.DATETIME_GetNowStr()+".txt"

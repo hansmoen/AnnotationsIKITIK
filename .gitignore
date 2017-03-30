@@ -1,0 +1,16 @@
+/LOG
+**/LOG/
+/*.pyc 
+*.pyc
+*.pickle
+*.gz
+*.bin
+*.h5
+*.txt~
+*.json~
+*.log
+*.log~
+*.xml
+*.a1
+*.s2
+
