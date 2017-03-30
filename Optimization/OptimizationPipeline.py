@@ -133,7 +133,7 @@ class Optimization_Pipeline ():
 if __name__ == "__main__":
     default_logfile_address =os.path.dirname(os.path.realpath(__file__))+"/LOGS/"+GF.DATETIME_GetNowStr()+".txt"
     parser = argparse.ArgumentParser(description='keras_4_annotations.py')
-    parser.add_argument('-data_folder', type=str, help='Location of the data folder', default='/home/hanmoe/text-classification/annotation/DATA')
+    parser.add_argument('-data_folder', type=str, help='Location of the data folder', default='/home/hanmoe/annotation/text-classification/DATA')
     parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], required=True)
     parser.add_argument('-ann_type', type=str, help='Train on sentence or document level, choices={"sent", "doc"}', choices=['sent', 'doc'], required=True)
     parser.add_argument('-save_folder', type=str, help='A new folder with model and log file will be created here.', default='MODELS')
