@@ -6,7 +6,7 @@ from data4keras import X_y_dataHandler
 
 class Optimization_Pipeline ():
     def __init__ (self, args):
-        self.global_devel_pred_metric = [] 
+        self.GLOBAL_BEST_DEVEL_PRED_RESULTS = []
 
         self.args = args 
         self._LogFileHandler = open (args.logfileaddress, "wt")
@@ -192,7 +192,7 @@ class Optimization_Pipeline ():
         f1_weighted = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
         f1_samples  = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
         
-        self.PredMetricLog.append ([f1_macro,f1_micro,f1_weighted,f1_samples])
+        self.PredMetricLog.append ([self.EpochNoCntr,f1_macro,f1_micro,f1_weighted,f1_samples])
         
         MSG = self.CurrentArchName 
         MSG += "\tEpoch: "+str(self.EpochNoCntr)
@@ -211,7 +211,7 @@ class Optimization_Pipeline ():
         self.__LoadData__()
         for arch in Archictectures:
             #1-Reset Evaluation 
-            self.TrainMetricLog = [] 
+            #self.TrainMetricLog = [] 
             self.PredMetricLog = []
             self.CurrentArchName = arch 
             
@@ -220,17 +220,25 @@ class Optimization_Pipeline ():
             self.__model , self.__WhichFeaturesToUse = eval ("ARCBuilder." + arch);
             
             #2-Compile model             
-            self.lp ("-"*30 + " COMPILING MODEL:" + arch)
+            #self.lp ("-"*30 + " COMPILING MODEL:" + arch)
             self.__model.compile (loss="binary_crossentropy", optimizer="adam") ; 
-            self.lp ("-"*30 + " DONE MODEL BUILDING " + "-" *30) 
+            #self.lp ("-"*30 + " DONE MODEL BUILDING " + "-" *30) 
             
             for EpochNo in range(self.args.nb_epoch):
                 self.EpochNoCntr = EpochNo + 1 #when we train for 1 epoch, this should be 1
-                
                 self.__train__() 
                 PRED = self.__predict__()
                 self.__evaluate__(PRED)
-                
+            
+            #Select best result of this particular architecture ... 
+            BestMeasure = 2 #Micro-FScore
+            BestResults = sorted (self.PredMetricLog , key = lambda x: x[BestMeasure] , reverse=True)[0]
+            self.GLOBAL_BEST_DEVEL_PRED_RESULTS.append ([arch]+BestResults)
+
+        self.lp (["-"*80 , "BEST RESULTS:" , "-"*80])
+        for best_result in sorted (self.GLOBAL_BEST_DEVEL_PRED_RESULTS, key = lambda x: x[BestMeasure+1] , reverse=True):
+            self.lp (str(best_result)) 
+            
 if __name__ == "__main__":
     default_logfile_address =os.path.dirname(os.path.realpath(__file__))+"/LOGS/"+GF.DATETIME_GetNowStr()+".txt"
     parser = argparse.ArgumentParser(description='keras_4_annotations.py')
