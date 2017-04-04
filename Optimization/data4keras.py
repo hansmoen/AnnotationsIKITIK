@@ -8,7 +8,7 @@ import numpy as np
 
 class X_y_dataHandler:
 
-    def __init__(self):
+    def __init__(self, ann_set):
 
         self.X_word_np = None
         self.X_lemma_np = None
@@ -26,6 +26,26 @@ class X_y_dataHandler:
         self.X_max_pos_value = 0
         self.y_max_len = 0
         self.y_max_value = 0
+
+        self.ann_set = ann_set # choices = ['kipu', 'sekavuus', 'infektio']
+        self.o_label_id = self.get_o_label_id()
+
+    def get_o_label_id(self):
+        """
+        Get the ID (placeholder) for the O label in the given annotation/data set.
+        Hardcoded based on the current data set.
+        ann_set choices = ['kipu', 'sekavuus', 'infektio'].
+        :return: O label ID
+        """
+        if self.ann_set == 'kipu':
+            return 7
+        elif self.ann_set == 'sekavuus':
+            return 18
+        elif self.ann_set == 'infektio':
+            return 16
+        else:
+            print('WARNING, in get_o_label_id(): no appropriate ann_set has been given, returning -1')
+            return -1
 
     def load_data_set(self, filename):
         """
@@ -120,7 +140,8 @@ class X_y_dataHandler:
         self.y_n_hot_np = np.zeros([len(self.y_ann_table), y_dim], dtype=np.int32)
         for i in range(0, len(self.y_ann_table)):
             for hot_index in self.y_ann_table[i]:
-                self.y_n_hot_np[i][hot_index - 1] = 1
+                if hot_index != self.o_label_id:
+                    self.y_n_hot_np[i][hot_index - 1] = 1
         #print(self.y_one_hot_np)  # ------
 
         # Check if everything went as planned ...
@@ -165,7 +186,7 @@ class X_y_dataHandler:
 if __name__ == "__main__":
 
     # sent
-    data = X_y_dataHandler()
+    data = X_y_dataHandler('')
     data.load_data_set('../Preprocess/data/train-with-keras/sent-train-nersuite.txt')
     print('Set size: ' + str(data.get_size()))
 
