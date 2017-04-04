@@ -1,156 +1,250 @@
-'''Notes:
-- RNNs are tricky. Choice of batch size is important,
-choice of loss and optimizer is critical, etc.
-Some configurations won't converge.
-- LSTM loss decrease patterns during training can be quite different
-from what you see with CNNs/MLPs/etc.
-'''
-
 from __future__ import print_function
-import numpy as np
+from __future__ import division
 
-np.random.seed(1337)  # for reproducibility
-
-from keras.preprocessing import sequence
-from keras.utils import np_utils
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Embedding, Merge
-from keras.layers import LSTM, SimpleRNN, GRU
-# from keras.datasets import imdb
-from keras.callbacks import Callback, EarlyStopping, History, ModelCheckpoint
-from itertools import islice
 import argparse
+from keras.models import load_model
 import sys
-import os
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-import w2v_handler
-
-class MyFileLog(Callback):
-    '''
-    Creates a log file with information about the run.
-
-    TODO: Legg til mer info om tidsintervall og resterende model parametere
-    '''
-    def __init__(self, write_to_filename):
-        super(Callback, self).__init__()
-        self.write_to_filename = write_to_filename
-        self.metrics = None
-        self.run_start_dtm = None
-        self.current_epoch_start_dtm = None
-
-        # Clear log file in case it already exists
-        f = open(self.write_to_filename, 'w')
-        f.close()
-
-    def on_train_begin(self, logs={}):
-        self.run_start_dtm = datetime.now()
-        self.metrics = self.params.get('metrics')
-        # with open(self.write_to_filename, 'a') as f:
-        #    f.write('nb_epoch: %s - nb_sample: %s\n\n' % (self.params.get('nb_epoch'), self.params.get('nb_sample')))
-
-    def on_train_end(self, logs={}):
-        run_end_dtm = datetime.now()
-        diff = relativedelta(run_end_dtm, self.run_start_dtm)
-        dtm_end_string = ('%s %02d:%02d:%02d' % (str(run_end_dtm.date()), run_end_dtm.hour, run_end_dtm.minute, run_end_dtm.second))
-        with open(self.write_to_filename, 'a') as f:
-            f.write('\nRun ended: ' + dtm_end_string)
-            f.write('\nTotal run time: %s days - %s hours - %s minutes - %s seconds' % (
-            diff.days, diff.hours, diff.minutes, diff.seconds))
-
-    def on_epoch_begin(self, epoch, logs={}):
-        self.current_epoch_start_dtm = datetime.now()
-        with open(self.write_to_filename, 'a') as f:
-            #f.write('Epoch %s/%s (%s/%s)\n' % (epoch, self.params['nb_epoch'] - 1, epoch + 1, self.params['nb_epoch']))
-            f.write('Epoch %s/%s\n' % (epoch + 1, self.params['nb_epoch']))
-
-    def on_epoch_end(self, epoch, logs={}):
-        delta = datetime.now() - self.current_epoch_start_dtm
-        sec_diff = delta.seconds + delta.microseconds / 1E6
-        with open(self.write_to_filename, 'a') as f:
-            f.write(str(sec_diff) + 's - ')
-            for i, p in enumerate(self.metrics):
-                # f.write(p + ': ' + str(logs.get(p)) + (' - ' if (i+1) < len(self.metrics) else '\n'))
-                f.write(('%s: %.04f' % (p, logs.get(p))) + (' - ' if (i + 1) < len(self.metrics) else '\n'))
-
-    def append(self, string):
-        with open(self.write_to_filename, 'a') as f:
-            f.write(string)
+import numpy as np
+from sklearn.metrics import f1_score
+from data4keras import X_y_dataHandler
 
 
-    #################################
-    X_lower_row_len = 1 # Lower text length threshold
-    X_upper_row_len = 400 # Upper text length threshold
-    X_used_row_len = -1
-
-    word_embeddings_dim = lemma_embeddings_dim = pos_embeddings_dim = default_embeddings_dim
-    lstm_out_dim = 300  # embeddings_dim
-
-    #################################
+def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, true_threshold=0.5):
 
 
+    print('\nLoading model "' + model_filename + '" ...')
+    model = load_model(model_filename)
 
-    # lstm_output_layer_size = embeddings_dim  # Same as its input, OK?
+    X_row_len = [X_shape[1] for X_shape in model.input_shape][0] # All input layers should have the same shape!
 
-    run_name = args.ann_set + '-' + args.ann_type + 
-    # run_name = ('%s-%02d_%02d_%02d' % (str(dtm_start.date()).replace("-", "_"), dtm_start.hour, dtm_start.minute, dtm_start.second))
-
-
-
-    run_save_folder = args.save_folder + '/run-' + run_name
-    if os.path.isdir(args.save_folder):
-        try:
-            os.stat(run_save_folder)
-        except:
-            os.mkdir(run_save_folder)
-    else:
-        sys.exit('save_folder "' + args.save_folder + '" does not exist, exiting!')
-
-    # log_filename = args.save_folder + '/log-' + dtm_start_string + '.txt'
+    y_max_value = model.output_shape[1]
 
 
+    if X_row_len < batch_size:
+        X_row_len = batch_size
+
+    print('X:', X_row_len, 'y:', y_max_value)
+
+    test_data_obj = X_y_dataHandler(ann_set)
+    test_data_obj.load_data_set(test_data_filename)
+    test_data_obj.make_numpy_arrays(X_row_len, y_max_value)
 
 
-    print('\nBuild model ...')
+    #print(model.batch_input_shape())
 
 
+    #f1_score = f1_score(y_true, y_pred, average=average)
 
-    print('\nTrain ...')
+    print('\nPredicting ...')
+    y_predicted_np_array = model.predict([test_data_obj.get_X_word_np_array(), test_data_obj.get_X_lemma_np_array(), test_data_obj.get_X_pos_np_array()], batch_size=batch_size)
 
-    # Callbacks
-    early_stop = EarlyStopping(monitor='val_loss', patience=5, verbose=1, mode='auto')  # mode='max'
-    save_model_checkpoint = ModelCheckpoint(run_save_folder + '/model.epoch.{epoch:d}.h5', monitor='val_loss',
-                                            verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
-
-    final_model.fit([train_data_obj.get_X_word_np_array(), train_data_obj.get_X_lemma_np_array(), train_data_obj.get_X_pos_np_array()],
-                     train_data_obj.get_y_n_hot_np_array(),
-                     batch_size=args.batch_size, nb_epoch=args.nb_epoch, callbacks=[early_stop, file_log, save_model_checkpoint],
-                     validation_data=([devel_data_obj.get_X_word_np_array(), devel_data_obj.get_X_lemma_np_array(), devel_data_obj.get_X_pos_np_array()], devel_data_obj.get_y_n_hot_np_array()),
-                     verbose=args.fit_verbose, shuffle=True)
+    print('SHAPE test_data_obj.get_y_n_hot_np_array():', test_data_obj.get_y_n_hot_np_array().shape)
+    print('SHAPE y_predicted_np_array:', y_predicted_np_array.shape)
 
 
-    print('\nFinally, evaluate on test data ...')
+    print('Calculating scores ...')
+    bool_predicted_np_array = np.zeros(y_predicted_np_array.shape, dtype=np.int32)
+    for i in range(0, y_predicted_np_array.shape[0]):
+        for j in range (0, y_predicted_np_array.shape[1]):
+            if y_predicted_np_array[i, j] >= true_threshold:
+                bool_predicted_np_array[i, j] = 1
 
-    eval_results = final_model.evaluate([test_data_obj.get_X_word_np_array(), test_data_obj.get_X_lemma_np_array(), test_data_obj.get_X_pos_np_array()], test_data_obj.get_y_n_hot_np_array(), batch_size=args.batch_size, verbose=args.fit_verbose)
-    for i in range(0, len(final_model.metrics_names)):
-        res_str = str('%s: %f' % (final_model.metrics_names[i], eval_results[i]))
-        print(res_str)
-        file_log.append('\n\n' + res_str)
+    #print('PREDICTED')
+    #print(bool_predicted_np_array) #-------
+    #print('GOLD')
+    #print(test_data_obj.get_y_n_hot_np_array()) #------
+
+    assert bool_predicted_np_array.shape == test_data_obj.get_y_n_hot_np_array().shape
+
+    f1_score_macro = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
+    print('f1_score_macro', f1_score_macro)
+    f1_score_micro = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
+    print('f1_score_micro', f1_score_micro)
+    f1_score_weighted = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
+    print('f1_score_weighted', f1_score_weighted)
+    f1_score_samples = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
+    print('f1_score_samples', f1_score_samples)
+
+    f1_score_class_list = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average=None)
+    print('\nf1 score for individual classes')
+    for i_class, class_f1_score in enumerate(f1_score_class_list):
+        print('\t' + str(i_class + 1) + ': ' + str(class_f1_score))
 
 
-    #print('Ending ...')
+if __name__ == "__main__":
+    ####################################%%%%%%%%%%%%%%%%%%%%%
+    parser = argparse.ArgumentParser(description='keras_evaluate_model.py')
+    parser.add_argument('-model', type=str, help='Keras model to load', default='models/run-kipu-sent-batch_size100-nb_epoch5-pre_embeddingsFalse/model.epoch.0.h5') #required=True)
+    parser.add_argument('-test', type=str, help='Filename for test data to load.', default='data/kipu/sent/sent-test-annotations.txt') #required=True)
+    parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
+    parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], required=True)
+    ####################################%%%%%%%%%%%%%%%%%%%%%
+    args = parser.parse_args(sys.argv[1:])
 
-    #file_log.append('\n\nTest score: %s' % (score))
-    #file_log.append('\nTest accuracy: %s' % (acc))
+
+    print('\nStart ... ')
+
+    evaluate_model(args.test, args.model, args.batch_size, args.ann_set)
 
     print('\nDone!')
 
-'''
-Info regarding running Keras on Taito-GPU (csc) nodes:
-https://github.com/TurkuNLP/SRNNMT/blob/master/README.csc
-https://github.com/TurkuNLP/SRNNMT/blob/master/train_bsub.sh
-'''
+"""
+Kipu:
+
+Classes
+-------
+1       Voimakkuus      2023
+2       Kipuun_liittyva_asia    7785
+3       Hoidon_onnistuminen     721
+4       Kipu    3397
+5       Laatu   597
+6       Kivunhoito      4540
+7       O       706438
+8       Toistuva_tilanne        1934
+9       Potentiaalinen_kipu     1288
+10      Implisiittinen_kipu     1235
+11      Tilanne 799
+12      Sijainti        2329
+13      Toimenpide      4244
+14      Suunnitelma     2923
+15      Aika    4759
+16      Ohjeistus       69
+
+
+Kipu SENT test set:
+-------------------
+f1_score_macro 0.650159718117
+f1_score_micro 0.952008518763
+f1_score_weighted 0.947406768905
+
+f1 score for individual classes
+1: 0.711111111111
+2: 0.508196721311
+3: 0.666666666667
+4: 0.911368015414
+5: 0.441988950276
+6: 0.824228028504
+7: 0.986670062829
+8: 0.737142857143
+9: 0.903361344538
+10: 0.59807073955
+11: 0.155172413793
+12: 0.7744
+13: 0.621749408983
+14: 0.828282828283
+15: 0.734146341463
+16: 0.0
+
+=================================
+
+Kipu DOC test set:
+lstm_out_dim = 400
+------------------
+f1_score_macro 0.459013930098
+f1_score_micro 0.60278551532
+f1_score_weighted 0.571876086906
+
+f1 score for individual classes
+1: 0.606593406593
+2: 0.587699316629
+3: 0.0449438202247
+4: 0.757363253857
+5: 0.0
+6: 0.709433962264
+7: 0.714285714286
+8: 0.632352941176
+9: 0.539772727273
+10: 0.320346320346
+11: 0.0
+12: 0.501240694789
+13: 0.616966580977
+14: 0.647619047619
+15: 0.665605095541
+16: 0.0
+
+
+=================================
+
+
+Kipu DOC test set:
+lstm_out_dim = 300
+------------------
+PADDING FROM LEFT:
+f1_score_macro 0.44368259309
+f1_score_micro 0.587672052663
+f1_score_weighted 0.552118386418
+
+f1 score for individual classes
+        1: 0.629464285714
+        2: 0.579075425791
+        3: 0.0
+        4: 0.748137108793
+        5: 0.108108108108
+        6: 0.723076923077
+        7: 0.674329501916
+        8: 0.592
+        9: 0.440816326531
+        10: 0.163043478261
+        11: 0.030303030303
+        12: 0.435294117647
+        13: 0.641095890411
+        14: 0.709401709402
+        15: 0.624775583483
+        16: 0.0
+
+
+PADDING FROM LEFT (run 2):
+f1_score_macro 0.410823887055
+f1_score_micro 0.551263902932
+f1_score_weighted 0.515119441406
+
+f1 score for individual classes
+        1: 0.565789473684
+        2: 0.577215189873
+        3: 0.0
+        4: 0.693215339233
+        5: 0.0
+        6: 0.597701149425
+        7: 0.649606299213
+        8: 0.643356643357
+        9: 0.142857142857
+        10: 0.286995515695
+        11: 0.0
+        12: 0.530612244898
+        13: 0.593659942363
+        14: 0.696428571429
+        15: 0.595744680851
+        16: 0.0
+
+
+PADDING FROM RIGHT:
+f1_score_macro 0.38229001295
+f1_score_micro 0.545138133565
+f1_score_weighted 0.493838084127
+
+f1 score for individual classes
+        1: 0.607142857143
+        2: 0.591346153846
+        3: 0.0
+        4: 0.741085271318
+        5: 0.0
+        6: 0.538043478261
+        7: 0.745222929936
+        8: 0.620689655172
+        9: 0.0
+        10: 0.1875
+        11: 0.0
+        12: 0.374558303887
+        13: 0.475524475524
+        14: 0.623762376238
+        15: 0.611764705882
+        16: 0.0
 
 
 
+"""
 
+
+"""
+[{'class_name': 'Merge', 'config': {'layers': [{'class_name': 'Sequential', 'config': [{'class_name': 'Embedding', 'config': {'input_length': 49, 'W_constraint': None, 'name': u'embedding_1', 'activity_regularizer': None, 'trainable': True, 'init': 'uniform', 'input_dtype': 'int32', 'mask_zero': True, 'batch_input_shape': (None, 49), 'W_regularizer': None, 'dropout': 0.2, 'input_dim': 217, 'output_dim': 300}}, {'class_name': 'LSTM', 'config': {'inner_activation': 'hard_sigmoid', 'trainable': True, 'inner_init': 'orthogonal', 'output_dim': 600, 'unroll': False, 'consume_less': u'cpu', 'init': 'glorot_uniform', 'dropout_U': 0.2, 'input_dtype': 'float32', 'b_regularizer': None, 'input_length': None, 'dropout_W': 0.2, 'activation': 'tanh', 'stateful': False, 'batch_input_shape': (None, None, 300), 'U_regularizer': None, 'name': u'lstm_1', 'go_backwards': False, 'input_dim': 300, 'return_sequences': False, 'W_regularizer': None, 'forget_bias_init': 'one'}}]}, {'class_name': 'Sequential', 'config': [{'class_name': 'Embedding', 'config': {'input_length': 49, 'W_constraint': None, 'name': u'embedding_2', 'activity_regularizer': None, 'trainable': True, 'init': 'uniform', 'input_dtype': 'int32', 'mask_zero': True, 'batch_input_shape': (None, 49), 'W_regularizer': None, 'dropout': 0.2, 'input_dim': 206, 'output_dim': 300}}, {'class_name': 'LSTM', 'config': {'inner_activation': 'hard_sigmoid', 'trainable': True, 'inner_init': 'orthogonal', 'output_dim': 600, 'unroll': False, 'consume_less': u'cpu', 'init': 'glorot_uniform', 'dropout_U': 0.2, 'input_dtype': 'float32', 'b_regularizer': None, 'input_length': None, 'dropout_W': 0.2, 'activation': 'tanh', 'stateful': False, 'batch_input_shape': (None, None, 300), 'U_regularizer': None, 'name': u'lstm_2', 'go_backwards': False, 'input_dim': 300, 'return_sequences': False, 'W_regularizer': None, 'forget_bias_init': 'one'}}]}, {'class_name': 'Sequential', 'config': [{'class_name': 'Embedding', 'config': {'input_length': 49, 'W_constraint': None, 'name': u'embedding_3', 'activity_regularizer': None, 'trainable': True, 'init': 'uniform', 'input_dtype': 'int32', 'mask_zero': True, 'batch_input_shape': (None, 49), 'W_regularizer': None, 'dropout': 0.2, 'input_dim': 15, 'output_dim': 300}}, {'class_name': 'LSTM', 'config': {'inner_activation': 'hard_sigmoid', 'trainable': True, 'inner_init': 'orthogonal', 'output_dim': 600, 'unroll': False, 'consume_less': u'cpu', 'init': 'glorot_uniform', 'dropout_U': 0.2, 'input_dtype': 'float32', 'b_regularizer': None, 'input_length': None, 'dropout_W': 0.2, 'activation': 'tanh', 'stateful': False, 'batch_input_shape': (None, None, 300), 'U_regularizer': None, 'name': u'lstm_3', 'go_backwards': False, 'input_dim': 300, 'return_sequences': False, 'W_regularizer': None, 'forget_bias_init': 'one'}}]}], 'name': u'merge_1', 'concat_axis': -1, 'mode_type': 'raw', 'dot_axes': -1, 'mode': u'concat', 'output_shape': None, 'output_shape_type': 'raw'}}, {'class_name': 'Dense', 'config': {'W_constraint': None, 'b_constraint': None, 'name': u'dense_1', 'activity_regularizer': None, 'trainable': True, 'init': 'glorot_uniform', 'bias': True, 'input_dim': None, 'b_regularizer': None, 'W_regularizer': None, 'activation': 'linear', 'output_dim': 8}}, {'class_name': 'Activation', 'config': {'activation': 'sigmoid', 'trainable': True, 'name': u'activation_1'}}]
+"""
