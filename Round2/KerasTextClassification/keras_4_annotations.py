@@ -27,6 +27,8 @@ from dateutil.relativedelta import relativedelta
 import w2v_handler
 from data4keras import X_y_dataHandler
 
+
+
 class MyFileLog(Callback):
     '''
     Creates a log file with information about the run.
@@ -350,6 +352,7 @@ if __name__ == "__main__":
     # Try using different optimizers and different optimizer configs
     #model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']) # Farrokh sier: vurder optimizer='scd'
+
 
     # From https://keras.io/getting-started/sequential-model-guide : For a multi-class classification problem, use: model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
