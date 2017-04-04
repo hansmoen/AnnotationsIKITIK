@@ -193,13 +193,13 @@ if __name__ == "__main__":
     print('Fetching information about the data set ... ')
 
     # ----------------------------------
-    train_data_obj = X_y_dataHandler()
+    train_data_obj = X_y_dataHandler(args.ann_set)
     train_data_obj.load_data_set(train_filename)
     # ----------------------------------
-    devel_data_obj = X_y_dataHandler()
+    devel_data_obj = X_y_dataHandler(args.ann_set)
     devel_data_obj.load_data_set(devel_filename)
     # ----------------------------------
-    test_data_obj = X_y_dataHandler()
+    test_data_obj = X_y_dataHandler(args.ann_set)
     test_data_obj.load_data_set(test_filename)
     # ----------------------------------
     X_word_max_value = max([train_data_obj.get_X_max_word_value(), devel_data_obj.get_X_max_word_value(), test_data_obj.get_X_max_word_value()])
