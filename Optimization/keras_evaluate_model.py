@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score
 from data4keras import X_y_dataHandler
 
 
-def evaluate_model(test_data_filename, model_filename, batch_size, true_threshold=0.5):
+def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, true_threshold=0.5):
 
 
     print('\nLoading model "' + model_filename + '" ...')
@@ -25,7 +25,7 @@ def evaluate_model(test_data_filename, model_filename, batch_size, true_threshol
 
     print('X:', X_row_len, 'y:', y_max_value)
 
-    test_data_obj = X_y_dataHandler()
+    test_data_obj = X_y_dataHandler(ann_set)
     test_data_obj.load_data_set(test_data_filename)
     test_data_obj.make_numpy_arrays(X_row_len, y_max_value)
 
@@ -62,6 +62,9 @@ def evaluate_model(test_data_filename, model_filename, batch_size, true_threshol
     print('f1_score_micro', f1_score_micro)
     f1_score_weighted = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
     print('f1_score_weighted', f1_score_weighted)
+    f1_score_samples = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
+    print('f1_score_samples', f1_score_samples)
+
     f1_score_class_list = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average=None)
     print('\nf1 score for individual classes')
     for i_class, class_f1_score in enumerate(f1_score_class_list):
@@ -74,13 +77,14 @@ if __name__ == "__main__":
     parser.add_argument('-model', type=str, help='Keras model to load', default='models/run-kipu-sent-batch_size100-nb_epoch5-pre_embeddingsFalse/model.epoch.0.h5') #required=True)
     parser.add_argument('-test', type=str, help='Filename for test data to load.', default='data/kipu/sent/sent-test-annotations.txt') #required=True)
     parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
+    parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], required=True)
     ####################################%%%%%%%%%%%%%%%%%%%%%
     args = parser.parse_args(sys.argv[1:])
 
 
     print('\nStart ... ')
 
-    evaluate_model(args.test, args.model, args.batch_size)
+    evaluate_model(args.test, args.model, args.batch_size, args.ann_set)
 
     print('\nDone!')
 
