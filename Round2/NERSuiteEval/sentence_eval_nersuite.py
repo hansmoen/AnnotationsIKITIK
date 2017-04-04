@@ -92,8 +92,8 @@ def evaluate_nersuite(predictions_filename, gold_filename):
 if __name__ == "__main__":
     ####################################%%%%%%%%%%%%%%%%%%%%%
     parser = argparse.ArgumentParser(description='sentence_eval_nersuite.py')
-    parser.add_argument('-pred', type=str, help='Filename for predicted data.', default='data/pred.txt')  # required=True)
-    parser.add_argument('-gold', type=str, help='Filename for gold data.', default='data/gold.txt') #required=True)
+    parser.add_argument('-pred', type=str, help='Filename for predicted data.', required=True) # default='data/pred.txt')
+    parser.add_argument('-gold', type=str, help='Filename for gold data.', required=True) # default='data/gold.txt')
     ####################################%%%%%%%%%%%%%%%%%%%%%
     args = parser.parse_args(sys.argv[1:])
 
