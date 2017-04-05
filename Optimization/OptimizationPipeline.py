@@ -260,6 +260,7 @@ if __name__ == "__main__":
     OP = Optimization_Pipeline (args) 
 
     Archs = [] 
+    """
     for vd in range(50,301,50):
         for lsd in range(50,301,50):
             for dv in [0.1,0.2,0.3,0.4,0.5]:
@@ -272,6 +273,10 @@ if __name__ == "__main__":
                 arch+= "'du' :"+str(dv)+"}"
                 arch+= ")" 
                 Archs.append (arch)
+    """
+    arch = "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.2 , 'du': 0.2})"
+    Archs = [arch]
+    OP.args.nb_epoch = 6 
     OP.Run_Optimization_Pipeline(Archs)
     OP.__exit__()
 
