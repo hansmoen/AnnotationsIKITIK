@@ -172,7 +172,7 @@ class Optimization_Pipeline ():
         
         return self.__model.predict (ANN_INPUT)
 
-    def __evaluate__(self, PRED):
+    def __evaluate__(self, PRED, predict_negatives=0):
         import numpy as np
         from sklearn.metrics import f1_score
 
@@ -183,7 +183,7 @@ class Optimization_Pipeline ():
         for i in range(0, y_predicted_np_array.shape[0]):
             for j in range (0, y_predicted_np_array.shape[1]):
                 if y_predicted_np_array[i, j] >= true_threshold:
-                    if self.devel_data_obj.include_negatives or j + 1 != self.devel_data_obj.o_label_id:
+                    if predict_negatives or j + 1 != self.devel_data_obj.o_label_id:
                         bool_predicted_np_array[i, j] = 1
     
         assert bool_predicted_np_array.shape == self.devel_data_obj.get_y_n_hot_np_array().shape
