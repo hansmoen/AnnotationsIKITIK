@@ -84,7 +84,7 @@ class MyFileLog(Callback):
 if __name__ == "__main__":
     ####################################%%%%%%%%%%%%%%%%%%%%%
     parser = argparse.ArgumentParser(description='keras_4_annotations.py')
-
+    """
     ## LOCAL TESTING ###################%%%%%%%%%%%%%%%%%%%%%
     parser.add_argument('-data_folder', type=str, help='Location of the data folder', default='data')
     parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], default='kipu')
@@ -95,13 +95,14 @@ if __name__ == "__main__":
     parser.add_argument('-pos_embeddings', type=str, help='Filename of the pre-created pos embeddings to use for the X data.', default=None)
     parser.add_argument('-normalize_embeddings', type=int, help='Wether or not to normalize the loaded pre-created word embeddings; default=1 (True)', choices=[0, 1], default=1)
     parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
-    parser.add_argument('-nb_epoch', type=int, help='Number of epochs, default=5', default=5)
+    parser.add_argument('-nb_epoch', type=int, help='Number of epochs, default=1', default=1)
     parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
     parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
+    parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=1 (True)', choices=[0, 1], default=1)
     ####################################%%%%%%%%%%%%%%%%%%%%%
     """
     ## EVEX RUN ########################%%%%%%%%%%%%%%%%%%%%%
-    parser.add_argument('-data_folder', type=str, help='Location of the data folder', default='/home/hanmoe/text-classification/annotation/DATA')
+    parser.add_argument('-data_folder', type=str, help='Location of the data folder', default='/home/hanmoe/annotation/text-classification/DATA')
     parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], required=True)
     parser.add_argument('-ann_type', type=str, help='Train on sentence or document level, choices={"sent", "doc"}', choices=['sent', 'doc'], required=True)
     parser.add_argument('-save_folder', type=str, help='A new folder with model and log file will be created here.', default='MODELS')
@@ -113,8 +114,9 @@ if __name__ == "__main__":
     parser.add_argument('-nb_epoch', type=int, help='Number of epochs, default=10', default=10)
     parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
     parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
+    parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=0 (False)', choices=[0, 1], default=0)
     ####################################%%%%%%%%%%%%%%%%%%%%%
-    """
+
     args = parser.parse_args(sys.argv[1:])
 
     print("Start ... ")
@@ -191,17 +193,17 @@ if __name__ == "__main__":
 
     # Get information about the data set
     print('Fetching information about the data set ... ')
-
     # ----------------------------------
-    train_data_obj = X_y_dataHandler(args.ann_set)
+    train_data_obj = X_y_dataHandler(args.ann_set, args.negatives)
     train_data_obj.load_data_set(train_filename)
     # ----------------------------------
-    devel_data_obj = X_y_dataHandler(args.ann_set)
+    devel_data_obj = X_y_dataHandler(args.ann_set, args.negatives)
     devel_data_obj.load_data_set(devel_filename)
     # ----------------------------------
-    test_data_obj = X_y_dataHandler(args.ann_set)
+    test_data_obj = X_y_dataHandler(args.ann_set, args.negatives)
     test_data_obj.load_data_set(test_filename)
     # ----------------------------------
+
     X_word_max_value = max([train_data_obj.get_X_max_word_value(), devel_data_obj.get_X_max_word_value(), test_data_obj.get_X_max_word_value()])
     X_lemma_max_value = max([train_data_obj.get_X_max_lemma_value(), devel_data_obj.get_X_max_lemma_value(), test_data_obj.get_X_max_lemma_value()])
     X_pos_max_value = max([train_data_obj.get_X_max_pos_value(), devel_data_obj.get_X_max_pos_value(), test_data_obj.get_X_max_pos_value()])
@@ -327,6 +329,7 @@ if __name__ == "__main__":
 
     print('\nBuild model ...')
 
+
     word_model = Sequential()
     word_model.add(Embedding(input_dim=X_word_max_value + 1, output_dim=word_embeddings_dim, input_length=X_used_row_len, weights=word_weights, dropout=0.2, trainable=True, mask_zero=True))
     word_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
@@ -346,14 +349,23 @@ if __name__ == "__main__":
 
     final_model = Sequential()
     final_model.add(merged)
+    #final_model.add(Dense(output_dim=(3*lstm_out_dim)))
     final_model.add(Dense(output_dim=y_max_value))
-    #model.add(Activation('softmax'))
     final_model.add(Activation('sigmoid'))
-    # Try using different optimizers and different optimizer configs
-    #model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']) # Farrokh sier: vurder optimizer='scd'
 
-
+    # Farrokh sier: vurder optimizer='scd'
+    #final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    # binary_crossentropy, categorical_crossentropy
+    """
+    # word only
+    final_model = Sequential()
+    final_model.add(Embedding(input_dim=X_word_max_value + 1, output_dim=word_embeddings_dim, input_length=X_used_row_len, weights=word_weights, dropout=0.2, trainable=True, mask_zero=True))
+    final_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
+    final_model.add(Dense(output_dim=y_max_value))
+    final_model.add(Activation('softmax'))
+    final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    """
     # From https://keras.io/getting-started/sequential-model-guide : For a multi-class classification problem, use: model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
 
@@ -364,12 +376,21 @@ if __name__ == "__main__":
     save_model_checkpoint = ModelCheckpoint(run_save_folder + '/model.epoch.{epoch:d}.h5', monitor='val_loss',
                                             verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
 
+    # word + lemma + pos
     final_model.fit([train_data_obj.get_X_word_np_array(), train_data_obj.get_X_lemma_np_array(), train_data_obj.get_X_pos_np_array()],
                      train_data_obj.get_y_n_hot_np_array(),
                      batch_size=args.batch_size, nb_epoch=args.nb_epoch, callbacks=[early_stop, file_log, save_model_checkpoint],
                      validation_data=([devel_data_obj.get_X_word_np_array(), devel_data_obj.get_X_lemma_np_array(), devel_data_obj.get_X_pos_np_array()], devel_data_obj.get_y_n_hot_np_array()),
                      verbose=args.fit_verbose, shuffle=True)
-
+    """
+    # word only
+    final_model.fit(train_data_obj.get_X_word_np_array(),
+                    train_data_obj.get_y_n_hot_np_array(),
+                    batch_size=args.batch_size, nb_epoch=args.nb_epoch,
+                    callbacks=[early_stop, file_log, save_model_checkpoint],
+                    validation_data=(devel_data_obj.get_X_word_np_array(), devel_data_obj.get_y_n_hot_np_array()),
+                    verbose=args.fit_verbose, shuffle=True)
+    """
 
     print('\nFinally, evaluate on test data ...')
 
