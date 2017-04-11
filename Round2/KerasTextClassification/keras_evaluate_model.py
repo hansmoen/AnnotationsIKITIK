@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score
 from data4keras import X_y_dataHandler
 
 
-def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, include_negatives=0, true_threshold=0.5):
+def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, predict_negatives=0, true_threshold=0.5):
 
 
     print('\nLoading model "' + model_filename + '" ...')
@@ -31,7 +31,7 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, incl
 
     print('X:', X_row_len, 'y:', y_max_value)
 
-    test_data_obj = X_y_dataHandler(ann_set, include_negatives)
+    test_data_obj = X_y_dataHandler(ann_set, predict_negatives)
     test_data_obj.load_data_set(test_data_filename)
     test_data_obj.make_numpy_arrays(X_row_len, y_max_value)
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     print('\nStart ... ')
 
-    evaluate_model(test_data_filename=args.test, model_filename=args.model, batch_size=args.batch_size, ann_set=args.ann_set, include_negatives=args.negatives)
+    evaluate_model(test_data_filename=args.test, model_filename=args.model, batch_size=args.batch_size, ann_set=args.ann_set, predict_negatives=args.negatives)
 
     print('\nDone!')
 
