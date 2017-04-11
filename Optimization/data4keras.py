@@ -8,7 +8,7 @@ import numpy as np
 
 class X_y_dataHandler:
 
-    def __init__(self, ann_set):
+    def __init__(self, ann_set, include_negatives=0):
 
         self.X_word_np = None
         self.X_lemma_np = None
@@ -29,6 +29,7 @@ class X_y_dataHandler:
 
         self.ann_set = ann_set # choices = ['kipu', 'sekavuus', 'infektio']
         self.o_label_id = self.get_o_label_id()
+        self.include_negatives = include_negatives
 
     def get_o_label_id(self):
         """
@@ -44,7 +45,7 @@ class X_y_dataHandler:
         elif self.ann_set == 'infektio':
             return 16
         else:
-            print('WARNING, in get_o_label_id(): no appropriate ann_set has been given, returning -1')
+            print('NOTE, O labels will not be removed!')
             return -1
 
     def load_data_set(self, filename):
@@ -140,8 +141,8 @@ class X_y_dataHandler:
         self.y_n_hot_np = np.zeros([len(self.y_ann_table), y_dim], dtype=np.int32)
         for i in range(0, len(self.y_ann_table)):
             for hot_index in self.y_ann_table[i]:
-                if hot_index != self.o_label_id:
-                    self.y_n_hot_np[i][hot_index - 1] = 1
+                if (self.include_negatives) or (hot_index != self.o_label_id):
+                    self.y_n_hot_np[i, hot_index - 1] = 1
         #print(self.y_one_hot_np)  # ------
 
         # Check if everything went as planned ...

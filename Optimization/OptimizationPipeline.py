@@ -78,13 +78,13 @@ class Optimization_Pipeline ():
     def __LoadData__(self):
         self.lp ("Fetching information about the data set ...") 
         # ----------------------------------
-        train_data_obj = X_y_dataHandler(self.args.ann_set)
+        train_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_negatives=0)
         train_data_obj.load_data_set(self.PARAMS["train_filename"])
         # ----------------------------------
-        devel_data_obj = X_y_dataHandler(self.args.ann_set)
+        devel_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_negatives=0)
         devel_data_obj.load_data_set(self.PARAMS["devel_filename"])
         # ----------------------------------
-        test_data_obj = X_y_dataHandler(self.args.ann_set)
+        test_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_negatives=0)
         test_data_obj.load_data_set(self.PARAMS["test_filename"])
         # ----------------------------------
         X_word_max_value = max([train_data_obj.get_X_max_word_value(), devel_data_obj.get_X_max_word_value(), test_data_obj.get_X_max_word_value()])
@@ -183,7 +183,8 @@ class Optimization_Pipeline ():
         for i in range(0, y_predicted_np_array.shape[0]):
             for j in range (0, y_predicted_np_array.shape[1]):
                 if y_predicted_np_array[i, j] >= true_threshold:
-                    bool_predicted_np_array[i, j] = 1
+                    if self.devel_data_obj.include_negatives or j + 1 != self.devel_data_obj.o_label_id:
+                        bool_predicted_np_array[i, j] = 1
     
         assert bool_predicted_np_array.shape == self.devel_data_obj.get_y_n_hot_np_array().shape
     

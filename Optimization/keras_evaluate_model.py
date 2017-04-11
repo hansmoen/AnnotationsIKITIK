@@ -9,23 +9,29 @@ from sklearn.metrics import f1_score
 from data4keras import X_y_dataHandler
 
 
-def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, true_threshold=0.5):
+def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, include_negatives=0, true_threshold=0.5):
 
 
     print('\nLoading model "' + model_filename + '" ...')
     model = load_model(model_filename)
 
+
+    # word + lemma + pos
     X_row_len = [X_shape[1] for X_shape in model.input_shape][0] # All input layers should have the same shape!
+    """
+    # word only
+    X_row_len = model.input_shape[1]
+    """
 
     y_max_value = model.output_shape[1]
 
 
-    if X_row_len < batch_size:
-        X_row_len = batch_size
+    #if X_row_len < batch_size:
+    #    X_row_len = batch_size
 
     print('X:', X_row_len, 'y:', y_max_value)
 
-    test_data_obj = X_y_dataHandler(ann_set)
+    test_data_obj = X_y_dataHandler(ann_set, include_negatives)
     test_data_obj.load_data_set(test_data_filename)
     test_data_obj.make_numpy_arrays(X_row_len, y_max_value)
 
@@ -36,7 +42,13 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, true
     #f1_score = f1_score(y_true, y_pred, average=average)
 
     print('\nPredicting ...')
+
+    # word + lemma + pos
     y_predicted_np_array = model.predict([test_data_obj.get_X_word_np_array(), test_data_obj.get_X_lemma_np_array(), test_data_obj.get_X_pos_np_array()], batch_size=batch_size)
+    """
+    # word only
+    y_predicted_np_array = model.predict(test_data_obj.get_X_word_np_array(), batch_size=batch_size)
+    """
 
     print('SHAPE test_data_obj.get_y_n_hot_np_array():', test_data_obj.get_y_n_hot_np_array().shape)
     print('SHAPE y_predicted_np_array:', y_predicted_np_array.shape)
@@ -45,9 +57,10 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, true
     print('Calculating scores ...')
     bool_predicted_np_array = np.zeros(y_predicted_np_array.shape, dtype=np.int32)
     for i in range(0, y_predicted_np_array.shape[0]):
-        for j in range (0, y_predicted_np_array.shape[1]):
-            if y_predicted_np_array[i, j] >= true_threshold:
-                bool_predicted_np_array[i, j] = 1
+        for j in range(0, y_predicted_np_array.shape[1]):
+            if test_data_obj.include_negatives or j+1 != test_data_obj.o_label_id:
+                if y_predicted_np_array[i, j] >= true_threshold:
+                    bool_predicted_np_array[i, j] = 1
 
     #print('PREDICTED')
     #print(bool_predicted_np_array) #-------
@@ -72,19 +85,31 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, true
 
 
 if __name__ == "__main__":
-    ####################################%%%%%%%%%%%%%%%%%%%%%
+    """
+    ## LOCAL TESTING ###################%%%%%%%%%%%%%%%%%%%%%
     parser = argparse.ArgumentParser(description='keras_evaluate_model.py')
-    parser.add_argument('-model', type=str, help='Keras model to load', default='models/run-kipu-sent-batch_size100-nb_epoch5-pre_embeddingsFalse/model.epoch.0.h5') #required=True)
+    parser.add_argument('-model', type=str, help='Keras model to load', default='models/run-kipu-sent-batch_size100-nb_epoch1-pre_embeddingsFalse/model.epoch.0.h5') #required=True)
     parser.add_argument('-test', type=str, help='Filename for test data to load.', default='data/kipu/sent/sent-test-annotations.txt') #required=True)
     parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
-    parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], required=True)
+    parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], default='kipu') #required=True)
+    parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=1 (True)', choices=[0, 1], default=1)
     ####################################%%%%%%%%%%%%%%%%%%%%%
+    """
+    ## EVEX RUN ########################%%%%%%%%%%%%%%%%%%%%%
+    parser = argparse.ArgumentParser(description='keras_evaluate_model.py')
+    parser.add_argument('-model', type=str, help='Keras model to load', required=True)
+    parser.add_argument('-test', type=str, help='Filename for test data to load.', required=True)
+    parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
+    parser.add_argument('-ann_set', type=str, help='What annotation set to use, choices={"kipu", "sekavuus", "infektio"}', choices=['kipu', 'sekavuus', 'infektio'], required=True)
+    parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=0 (False)', choices=[0, 1], default=0)
+    ####################################%%%%%%%%%%%%%%%%%%%%%
+
     args = parser.parse_args(sys.argv[1:])
 
 
     print('\nStart ... ')
 
-    evaluate_model(args.test, args.model, args.batch_size, args.ann_set)
+    evaluate_model(test_data_filename=args.test, model_filename=args.model, batch_size=args.batch_size, ann_set=args.ann_set, include_negatives=args.negatives)
 
     print('\nDone!')
 
