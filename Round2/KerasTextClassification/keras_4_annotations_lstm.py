@@ -14,8 +14,8 @@ np.random.seed(1337)  # for reproducibility
 from keras.preprocessing import sequence
 from keras.utils import np_utils
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Embedding, Merge
-from keras.layers import LSTM, SimpleRNN, GRU
+from keras.layers import Dense, Dropout, Activation, Embedding, Merge, LSTM, SimpleRNN, GRU
+from keras.layers.wrappers import Bidirectional
 # from keras.datasets import imdb
 from keras.callbacks import Callback, EarlyStopping, History, ModelCheckpoint
 from itertools import islice
@@ -330,18 +330,21 @@ if __name__ == "__main__":
     print('\nBuild model ...')
 
 
+    # word + lemma + pos
     word_model = Sequential()
     word_model.add(Embedding(input_dim=X_word_max_value + 1, output_dim=word_embeddings_dim, input_length=X_used_row_len, weights=word_weights, dropout=0.2, trainable=True, mask_zero=True))
     word_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
+    #word_model.add(Bidirectional(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2)))
 
     lemma_model = Sequential()
     lemma_model.add(Embedding(input_dim=X_lemma_max_value + 1, output_dim=lemma_embeddings_dim, input_length=X_used_row_len, weights=lemma_weights, dropout=0.2, trainable=True, mask_zero=True))
     lemma_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
+    #lemma_model.add(Bidirectional(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2)))
 
     pos_model = Sequential()
     pos_model.add(Embedding(input_dim=X_pos_max_value + 1, output_dim=pos_embeddings_dim, input_length=X_used_row_len, weights=pos_weights, dropout=0.2, trainable=True, mask_zero=True))
     pos_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
-
+    #pos_model.add(Bidirectional(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2)))
 
     merged = Merge([word_model, lemma_model, pos_model], mode='concat')
 
@@ -354,7 +357,7 @@ if __name__ == "__main__":
     final_model.add(Activation('sigmoid'))
 
     # Farrokh sier: vurder optimizer='scd'
-    #final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    #final_model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     # binary_crossentropy, categorical_crossentropy
     """
@@ -363,7 +366,7 @@ if __name__ == "__main__":
     final_model.add(Embedding(input_dim=X_word_max_value + 1, output_dim=word_embeddings_dim, input_length=X_used_row_len, weights=word_weights, dropout=0.2, trainable=True, mask_zero=True))
     final_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
     final_model.add(Dense(output_dim=y_max_value))
-    final_model.add(Activation('softmax'))
+    final_model.add(Activation('sigmoid'))
     final_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     """
     # From https://keras.io/getting-started/sequential-model-guide : For a multi-class classification problem, use: model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
@@ -394,13 +397,20 @@ if __name__ == "__main__":
 
     print('\nFinally, evaluate on test data ...')
 
+    # word + lemma + pos
     eval_results = final_model.evaluate([test_data_obj.get_X_word_np_array(), test_data_obj.get_X_lemma_np_array(), test_data_obj.get_X_pos_np_array()], test_data_obj.get_y_n_hot_np_array(), batch_size=args.batch_size, verbose=args.fit_verbose)
     for i in range(0, len(final_model.metrics_names)):
         res_str = str('%s: %f' % (final_model.metrics_names[i], eval_results[i]))
         print(res_str)
         file_log.append('\n\n' + res_str)
-
-
+    """
+    # word only
+    eval_results = final_model.evaluate(test_data_obj.get_X_word_np_array(), test_data_obj.get_y_n_hot_np_array(), batch_size=args.batch_size, verbose=args.fit_verbose)
+    for i in range(0, len(final_model.metrics_names)):
+        res_str = str('%s: %f' % (final_model.metrics_names[i], eval_results[i]))
+        print(res_str)
+        file_log.append('\n\n' + res_str)
+    """
     #print('Ending ...')
 
     #file_log.append('\n\nTest score: %s' % (score))
