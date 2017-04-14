@@ -55,8 +55,8 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, pred
 
     # Fetch the gold data
     gold_np_array = test_data_obj.get_y_n_hot_np_array()
-    if not test_data_obj.include_negatives:
-        gold_np_array = np.delete(gold_np_array, test_data_obj.o_label_id - 1, 1)
+    #if not test_data_obj.include_o_labels:
+    #    gold_np_array = np.delete(gold_np_array, test_data_obj.o_label_id - 1, 1)
 
     print('Calculating scores ...')
     bool_predicted_np_array = np.zeros(y_predicted_np_array.shape, dtype=np.int32)
@@ -66,29 +66,29 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, pred
             if y_predicted_np_array[i, j] >= true_threshold:
                 bool_predicted_np_array[i, j] = 1
 
-    if not test_data_obj.include_negatives:
-        bool_predicted_np_array = np.delete(bool_predicted_np_array, test_data_obj.o_label_id - 1, 1)
+    #if not test_data_obj.include_o_labels:
+    #    bool_predicted_np_array = np.delete(bool_predicted_np_array, test_data_obj.o_label_id - 1, 1)
 
     #print('PREDICTED')
     #print(bool_predicted_np_array) #-------
     #print('GOLD')
     #print(test_data_obj.get_y_n_hot_np_array()) #------
 
-    assert gold_np_array.shape == bool_predicted_np_array.shape
+    assert test_data_obj.get_y_n_hot_np_array().shape == bool_predicted_np_array.shape
 
-    f1_score_macro = f1_score(gold_np_array, bool_predicted_np_array, average='macro')
+    f1_score_macro = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
     print('f1_score_macro', f1_score_macro)
-    f1_score_micro = f1_score(gold_np_array, bool_predicted_np_array, average='micro')
+    f1_score_micro = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
     print('f1_score_micro', f1_score_micro)
-    f1_score_weighted = f1_score(gold_np_array, bool_predicted_np_array, average='weighted')
+    f1_score_weighted = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
     print('f1_score_weighted', f1_score_weighted)
-    f1_score_samples = f1_score(gold_np_array, bool_predicted_np_array, average='samples')
+    f1_score_samples = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
     print('f1_score_samples', f1_score_samples)
 
-    f1_score_class_list = f1_score(gold_np_array, bool_predicted_np_array, average=None)
+    f1_score_class_list = f1_score(test_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average=None)
     print('\nf1 score for individual classes')
 
-    if not test_data_obj.include_negatives:
+    if not test_data_obj.include_o_labels:
         i_class = 0
         for i in range(0, len(f1_score_class_list)):
             class_f1_score = f1_score_class_list[i]

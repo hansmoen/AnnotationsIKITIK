@@ -98,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument('-nb_epoch', type=int, help='Number of epochs, default=1', default=1)
     parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
     parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
-    parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=1 (True)', choices=[0, 1], default=1)
+    parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=0 (False)', choices=[0, 1], default=0)
     ####################################%%%%%%%%%%%%%%%%%%%%%
     """
     ## EVEX RUN ########################%%%%%%%%%%%%%%%%%%%%%
@@ -223,6 +223,9 @@ if __name__ == "__main__":
     # ----------------------------------
     test_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
     # ----------------------------------
+    # Need to check again due to potential removal of the O label column
+    y_max_value = max([train_data_obj.get_y_max_value(), devel_data_obj.get_y_max_value(), test_data_obj.get_y_max_value()])
+
     train_data_size = train_data_obj.get_size()
     devel_data_size = devel_data_obj.get_size()
     test_data_size = test_data_obj.get_size()

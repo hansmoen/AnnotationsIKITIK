@@ -222,6 +222,9 @@ if __name__ == "__main__":
     # ----------------------------------
     test_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=args.padding_side)
     # ----------------------------------
+    # Need to check again due to potential removal of the O label column
+    y_max_value = max([train_data_obj.get_y_max_value(), devel_data_obj.get_y_max_value(), test_data_obj.get_y_max_value()])
+
     train_data_size = train_data_obj.get_size()
     devel_data_size = devel_data_obj.get_size()
     test_data_size = test_data_obj.get_size()
