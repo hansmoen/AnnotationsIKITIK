@@ -183,16 +183,28 @@ class Optimization_Pipeline ():
         for i in range(0, y_predicted_np_array.shape[0]):
             for j in range (0, y_predicted_np_array.shape[1]):
                 if y_predicted_np_array[i, j] >= true_threshold:
-                    if predict_negatives or j + 1 != self.devel_data_obj.o_label_id:
-                        bool_predicted_np_array[i, j] = 1
-    
-        assert bool_predicted_np_array.shape == self.devel_data_obj.get_y_n_hot_np_array().shape
-    
-        f1_macro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
-        f1_micro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
-        f1_weighted = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
-        f1_samples  = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
-        
+                    #if predict_negatives or j + 1 != self.devel_data_obj.o_label_id:
+                    bool_predicted_np_array[i, j] = 1
+
+        devel_gold_np_array = self.devel_data_obj.get_y_n_hot_np_array()
+        if not predict_negatives:
+            bool_predicted_np_array = np.delete(bool_predicted_np_array, self.devel_data_obj.o_label_id - 1, 1)
+            devel_gold_np_array = np.delete(devel_gold_np_array, self.devel_data_obj.o_label_id - 1, 1)
+
+        #assert bool_predicted_np_array.shape == self.devel_data_obj.get_y_n_hot_np_array().shape
+
+        #f1_macro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
+        #f1_micro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
+        #f1_weighted = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
+        #f1_samples  = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
+
+        assert bool_predicted_np_array.shape == devel_gold_np_array.shape
+
+        f1_macro = f1_score(devel_gold_np_array, bool_predicted_np_array, average='macro')
+        f1_micro = f1_score(devel_gold_np_array, bool_predicted_np_array, average='micro')
+        f1_weighted = f1_score(devel_gold_np_array, bool_predicted_np_array, average='weighted')
+        f1_samples  = f1_score(devel_gold_np_array, bool_predicted_np_array, average='samples')
+
         self.PredMetricLog.append ([self.EpochNoCntr,f1_macro,f1_micro,f1_weighted,f1_samples])
         
         MSG = self.CurrentArchName 
