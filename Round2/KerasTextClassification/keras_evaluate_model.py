@@ -24,18 +24,20 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, pred
     """
 
     y_max_value = model.output_shape[1]
+    if not predict_negatives:
+        y_max_value += 1
 
 
     #if X_row_len < batch_size:
     #    X_row_len = batch_size
 
-    print('X:', X_row_len, 'y:', y_max_value)
 
     test_data_obj = X_y_dataHandler(ann_set, predict_negatives)
     test_data_obj.load_data_set(test_data_filename)
     test_data_obj.make_numpy_arrays(X_row_len, y_max_value)
 
 
+    #print('X:', X_row_len, 'y:', test_data_obj.get_y_max_value())
     #print(model.batch_input_shape())
 
 
@@ -54,7 +56,7 @@ def evaluate_model(test_data_filename, model_filename, batch_size, ann_set, pred
     print('SHAPE y_predicted_np_array:', y_predicted_np_array.shape)
 
     # Fetch the gold data
-    gold_np_array = test_data_obj.get_y_n_hot_np_array()
+    #gold_np_array = test_data_obj.get_y_n_hot_np_array()
     #if not test_data_obj.include_o_labels:
     #    gold_np_array = np.delete(gold_np_array, test_data_obj.o_label_id - 1, 1)
 
