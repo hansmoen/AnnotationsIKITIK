@@ -78,13 +78,13 @@ class Optimization_Pipeline ():
     def __LoadData__(self):
         self.lp ("Fetching information about the data set ...") 
         # ----------------------------------
-        train_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_negatives=0)
+        train_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_o_labels=0)
         train_data_obj.load_data_set(self.PARAMS["train_filename"])
         # ----------------------------------
-        devel_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_negatives=0)
+        devel_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_o_labels=0)
         devel_data_obj.load_data_set(self.PARAMS["devel_filename"])
         # ----------------------------------
-        test_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_negatives=0)
+        test_data_obj = X_y_dataHandler(ann_set=self.args.ann_set, include_o_labels=0)
         test_data_obj.load_data_set(self.PARAMS["test_filename"])
         # ----------------------------------
         X_word_max_value = max([train_data_obj.get_X_max_word_value(), devel_data_obj.get_X_max_word_value(), test_data_obj.get_X_max_word_value()])
@@ -106,6 +106,9 @@ class Optimization_Pipeline ():
         # ----------------------------------
         test_data_obj.make_numpy_arrays(X_used_row_len, y_max_value, padding_side=self.args.padding_side)
         # ----------------------------------
+        # Need to check again due to potential removal of the O label column
+        y_max_value = max([train_data_obj.get_y_max_value(), devel_data_obj.get_y_max_value(), test_data_obj.get_y_max_value()])
+
         train_data_size = train_data_obj.get_size()
         devel_data_size = devel_data_obj.get_size()
         test_data_size = test_data_obj.get_size()
@@ -172,7 +175,7 @@ class Optimization_Pipeline ():
         
         return self.__model.predict (ANN_INPUT)
 
-    def __evaluate__(self, PRED, predict_negatives=0):
+    def __evaluate__(self, PRED): #, predict_o_labels=0):
         import numpy as np
         from sklearn.metrics import f1_score
 
@@ -183,27 +186,27 @@ class Optimization_Pipeline ():
         for i in range(0, y_predicted_np_array.shape[0]):
             for j in range (0, y_predicted_np_array.shape[1]):
                 if y_predicted_np_array[i, j] >= true_threshold:
-                    #if predict_negatives or j + 1 != self.devel_data_obj.o_label_id:
+                    #if predict_o_labels or j + 1 != self.devel_data_obj.o_label_id:
                     bool_predicted_np_array[i, j] = 1
 
-        devel_gold_np_array = self.devel_data_obj.get_y_n_hot_np_array()
-        if not predict_negatives:
-            bool_predicted_np_array = np.delete(bool_predicted_np_array, self.devel_data_obj.o_label_id - 1, 1)
-            devel_gold_np_array = np.delete(devel_gold_np_array, self.devel_data_obj.o_label_id - 1, 1)
+        #devel_gold_np_array = self.devel_data_obj.get_y_n_hot_np_array()
+        #if not predict_o_labels:
+        #    bool_predicted_np_array = np.delete(bool_predicted_np_array, self.devel_data_obj.o_label_id - 1, 1)
+        #    devel_gold_np_array = np.delete(devel_gold_np_array, self.devel_data_obj.o_label_id - 1, 1)
 
-        #assert bool_predicted_np_array.shape == self.devel_data_obj.get_y_n_hot_np_array().shape
+        #assert bool_predicted_np_array.shape == devel_gold_np_array.shape
 
-        #f1_macro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
-        #f1_micro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
-        #f1_weighted = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
-        #f1_samples  = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
+        #f1_macro = f1_score(devel_gold_np_array, bool_predicted_np_array, average='macro')
+        #f1_micro = f1_score(devel_gold_np_array, bool_predicted_np_array, average='micro')
+        #f1_weighted = f1_score(devel_gold_np_array, bool_predicted_np_array, average='weighted')
+        #f1_samples  = f1_score(devel_gold_np_array, bool_predicted_np_array, average='samples')
 
-        assert bool_predicted_np_array.shape == devel_gold_np_array.shape
+        assert bool_predicted_np_array.shape == self.devel_data_obj.get_y_n_hot_np_array().shape
 
-        f1_macro = f1_score(devel_gold_np_array, bool_predicted_np_array, average='macro')
-        f1_micro = f1_score(devel_gold_np_array, bool_predicted_np_array, average='micro')
-        f1_weighted = f1_score(devel_gold_np_array, bool_predicted_np_array, average='weighted')
-        f1_samples  = f1_score(devel_gold_np_array, bool_predicted_np_array, average='samples')
+        f1_macro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='macro')
+        f1_micro = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='micro')
+        f1_weighted = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='weighted')
+        f1_samples  = f1_score(self.devel_data_obj.get_y_n_hot_np_array(), bool_predicted_np_array, average='samples')
 
         self.PredMetricLog.append ([self.EpochNoCntr,f1_macro,f1_micro,f1_weighted,f1_samples])
         
