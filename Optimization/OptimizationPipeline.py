@@ -300,6 +300,7 @@ if __name__ == "__main__":
     """
   
     OP.args.nb_epoch = 10
+    OP.args.fit_verbose = 0 #for taito execution 
     OP.Run_Optimization_Pipeline(Archs)
     OP.__exit__()
 
