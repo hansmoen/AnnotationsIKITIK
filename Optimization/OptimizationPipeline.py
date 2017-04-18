@@ -270,7 +270,7 @@ if __name__ == "__main__":
     parser.add_argument('-batch_size', type=int, help='Size of batches; default=100', default=100)
     parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
     parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
-    parser.add_argument('-logfileaddress', type=str, help='LogFile path and name.', choices=['right', 'left'], default=default_logfile_address)
+    parser.add_argument('-logfileaddress', type=str, help='LogFile path and name.', default=default_logfile_address)
     
     args = parser.parse_args(sys.argv[1:])
     OP = Optimization_Pipeline (args) 
