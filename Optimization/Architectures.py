@@ -55,3 +55,4 @@ class ANN_Architecture_Builder:
         #model.add(Activation('softmax'))
         final_model.add(Activation('sigmoid'))
         return final_model , self.WhichFeaturesToUse
+

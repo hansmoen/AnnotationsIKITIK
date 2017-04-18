@@ -241,7 +241,7 @@ class Optimization_Pipeline ():
             #self.lp ("-"*30 + " DONE MODEL BUILDING " + "-" *30) 
             
             for EpochNo in range(self.args.nb_epoch):
-                self.EpochNoCntr = EpochNo + 1 #when we train for 1 epoch, this should be 1
+                self.EpochNoCntr = EpochNo + 1 #when we train for 1st epoch (for the first time), this should be 1
                 self.__train__() 
                 PRED = self.__predict__()
                 self.__evaluate__(PRED)
@@ -251,9 +251,9 @@ class Optimization_Pipeline ():
             BestResults = sorted (self.PredMetricLog , key = lambda x: x[BestMeasure] , reverse=True)[0]
             self.GLOBAL_BEST_DEVEL_PRED_RESULTS.append ([arch]+BestResults)
 
-        self.lp (["-"*80 , "BEST RESULTS:" , "-"*80])
-        for best_result in sorted (self.GLOBAL_BEST_DEVEL_PRED_RESULTS, key = lambda x: x[BestMeasure+1] , reverse=True):
-            self.lp (str(best_result)) 
+            self.lp (["-"*80 , "BEST RESULTS so far:" , "-"*80])
+            for best_result in sorted (self.GLOBAL_BEST_DEVEL_PRED_RESULTS, key = lambda x: x[BestMeasure+1] , reverse=True):
+                self.lp (str(best_result)) 
             
 if __name__ == "__main__":
     default_logfile_address =os.path.dirname(os.path.realpath(__file__))+"/LOGS/"+GF.DATETIME_GetNowStr()+".txt"
@@ -275,8 +275,15 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     OP = Optimization_Pipeline (args) 
 
-    Archs = [] 
-    """
+    Archs  = [] 
+    Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.2 , 'du': 0.01})" ]
+    Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 200, 'lsd':300 , 'dw': 0.2 , 'du': 0.01})" ]
+    Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 200, 'lsd':400 , 'dw': 0.2 , 'du': 0.01})" ]
+    Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 100, 'lsd':200 , 'dw': 0.2 , 'du': 0.01})" ]
+    Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 100, 'lsd':200 , 'dw': 0.2 , 'du': 0.01})" ]
+    Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.5 , 'du': 0.01})" ]
+
+
     for vd in range(50,301,50):
         for lsd in range(50,301,50):
             for dv in [0.1,0.2,0.3,0.4,0.5]:
@@ -289,9 +296,9 @@ if __name__ == "__main__":
                 arch+= "'du' :"+str(dv)+"}"
                 arch+= ")" 
                 Archs.append (arch)
-    """
-    arch = "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.2 , 'du': 0.2})"
-    Archs = [arch]
+   
+ 
+  
     OP.args.nb_epoch = 6 
     OP.Run_Optimization_Pipeline(Archs)
     OP.__exit__()
