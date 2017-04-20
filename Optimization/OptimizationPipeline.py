@@ -275,13 +275,13 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     OP = Optimization_Pipeline (args) 
 
-    Archs  = [] 
-    Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.2 , 'du': 0.01})" ]
-    Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 200, 'lsd':300 , 'dw': 0.2 , 'du': 0.01})" ]
-    Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 200, 'lsd':400 , 'dw': 0.2 , 'du': 0.01})" ]
-    Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 100, 'lsd':200 , 'dw': 0.2 , 'du': 0.01})" ]
-    Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 100, 'lsd':200 , 'dw': 0.2 , 'du': 0.01})" ]
-    Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.5 , 'du': 0.01})" ]
+    Archs  = ["StackedLSTMs()"] 
+    #Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.2 , 'du': 0.01})" ]
+    #Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 200, 'lsd':300 , 'dw': 0.2 , 'du': 0.01})" ]
+    #Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 200, 'lsd':400 , 'dw': 0.2 , 'du': 0.01})" ]
+    #Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 100, 'lsd':200 , 'dw': 0.2 , 'du': 0.01})" ]
+    #Archs += [ "Hans_1 ({'wed': 400 , 'led': 400, 'ped': 100, 'lsd':200 , 'dw': 0.2 , 'du': 0.01})" ]
+    #Archs += [ "Hans_1 ({'wed': 300 , 'led': 300, 'ped': 300, 'lsd':300 , 'dw': 0.5 , 'du': 0.01})" ]
 
     """
     for vd in range(50,301,50):
