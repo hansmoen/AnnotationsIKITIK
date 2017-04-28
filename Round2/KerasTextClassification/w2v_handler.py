@@ -72,14 +72,16 @@ def save_word2vec_format(vectors, vocab, save_filename, fvocab=None, binary=True
     if fvocab is not None:
         # logger.info("storing vocabulary in %s" % (fvocab))
         with utils.smart_open(fvocab, 'wb') as vout:
-            for word, vocab in sorted(iteritems(vocab), key=lambda item: -item[1].count):
-                vout.write(utils.to_utf8("%s %s\n" % (word, vocab.count)))
+            for word, voc in sorted(iteritems(vocab), key=lambda item: -item[1].count):
+            #for word, vocab in sorted(vocab.items(), key=lambda item: -item[1].count):
+                vout.write(utils.to_utf8("%s %s\n" % (word, voc.count)))
     # logger.info("storing %sx%s projection weights into %s" % (len(self.vocab), self.vector_size, fname))
     # assert (len(vocab), self.vector_size) == self.syn0.shape
     with utils.smart_open(save_filename, 'wb') as fout:
-        fout.write(utils.to_utf8("%s %s\n" % vectors.shape))
+        fout.write(utils.to_utf8("%s %s\n" % (len(vectors), len(vectors[0])))) # vectors.shape
         # store in sorted order: most frequent words at the top
         for word, voc in sorted(iteritems(vocab), key=lambda item: -item[1].count):
+        #for word, voc in sorted(vocab.items(), key=lambda item: -item[1].count):
             row = vectors[voc.index]
             if binary:
                 fout.write(utils.to_utf8(word) + b" " + row.tostring())

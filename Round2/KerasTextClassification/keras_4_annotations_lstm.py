@@ -13,7 +13,7 @@ np.random.seed(1337)  # for reproducibility
 
 from keras.preprocessing import sequence
 from keras.utils import np_utils
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense, Dropout, Activation, Embedding, Merge, LSTM, SimpleRNN, GRU
 from keras.layers.wrappers import Bidirectional
 # from keras.datasets import imdb
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
     parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
     parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=0 (False)', choices=[0, 1], default=0)
+    parser.add_argument('-load_model', type=str, help='Load a model to continue training?', default='')
     ####################################%%%%%%%%%%%%%%%%%%%%%
     """
     ## EVEX RUN ########################%%%%%%%%%%%%%%%%%%%%%
@@ -115,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument('-fit_verbose', type=int, help='Verbose during training, 0=silent, 1=normal, 2=minimal; default=1', choices=[0, 1, 2], default=1)
     parser.add_argument('-padding_side', type=str, help='From what side to do the padding, choices={"right", "left"}; default="left"', choices=['right', 'left'], default='left')
     parser.add_argument('-negatives', type=int, help='Include negative O labels in training?; default=0 (False)', choices=[0, 1], default=0)
+    parser.add_argument('-load_model', type=str, help='Load a model to continue training?', default='')
     ####################################%%%%%%%%%%%%%%%%%%%%%
 
     args = parser.parse_args(sys.argv[1:])
@@ -141,35 +143,35 @@ if __name__ == "__main__":
     word_embeddings_model = None
     lemma_embeddings_model = None
     pos_embeddings_model = None
-    embeddings_used_string = 'False'
-    if args.word_embeddings and args.lemma_embeddings and args.pos_embeddings:
+    embeddings_used_string = ''
+    if args.word_embeddings:
+        print('Loading pre-created WORD embedding models to use as weights ... ')
+        word_embeddings_model = w2v_handler.W2vModel()
+        word_embeddings_model.load_w2v_model(args.word_embeddings, binary=True)
+        word_embeddings_dim = word_embeddings_model.get_dim()
+        embeddings_used_string += 'Word'
+
+    if args.lemma_embeddings:
+        print('Loading pre-created LEMMA embedding models to use as weights ... ')
+        lemma_embeddings_model = w2v_handler.W2vModel()
+        lemma_embeddings_model.load_w2v_model(args.lemma_embeddings, binary=True)
+        lemma_embeddings_dim = lemma_embeddings_model.get_dim()
+        embeddings_used_string += 'Lemma'
+
+    if args.pos_embeddings:
+        print('Loading pre-created POS embedding models to use as weights ... ')
         # FOR GUIDE ON WORD VECTORS, SEE: https://github.com/fchollet/keras/issues/853
-        print('Loading pre-created embedding models to use as weights ... ')
+        pos_embeddings_model = w2v_handler.W2vModel()
+        pos_embeddings_model.load_w2v_model(args.pos_embeddings, binary=True)
+        pos_embeddings_dim = pos_embeddings_model.get_dim()
+        embeddings_used_string += 'Pos'
 
-        try:
-            word_embeddings_model = w2v_handler.W2vModel()
-            word_embeddings_model.load_w2v_model(args.word_embeddings, binary=True)
-            word_embeddings_dim = word_embeddings_model.get_dim()
+    if len(embeddings_used_string) == 0:
+        embeddings_used_string = 'None'
 
-            lemma_embeddings_model = w2v_handler.W2vModel()
-            lemma_embeddings_model.load_w2v_model(args.lemma_embeddings, binary=True)
-            lemma_embeddings_dim = lemma_embeddings_model.get_dim()
+    if args.normalize_embeddings:
+        embeddings_used_string += '_norm'
 
-            pos_embeddings_model = w2v_handler.W2vModel()
-            pos_embeddings_model.load_w2v_model(args.pos_embeddings, binary=True)
-            pos_embeddings_dim = pos_embeddings_model.get_dim()
-
-            embeddings_used_string = 'True'
-
-            if (args.normalize_embeddings):
-                embeddings_used_string += '_norm'
-        except:
-            print('No embeddings model found in: ' + args.embeddings + '\nStopping the run!')
-            sys.exit(-1)
-
-            word_embeddings_model = lemma_embeddings_model = pos_embeddings_model = None
-            embeddings_used_string = 'False'
-            word_embeddings_dim = lemma_embeddings_dim = pos_embeddings_dim = default_embeddings_dim
 
     # lstm_output_layer_size = embeddings_dim  # Same as its input, OK?
 
@@ -276,16 +278,16 @@ if __name__ == "__main__":
         print('Extracting word embeddings from the embeddings model ...')
         embeddings_count = max(X_word_max_value + 1, len(word_embeddings_model.get_vocab()) + 1)
         embedding_weights = np.zeros((embeddings_count, word_embeddings_dim))
+        #embedding_weights = np.random.rand(embeddings_count, word_embeddings_dim)
         for word_placeholder in word_embeddings_model.get_vocab():
             # print(word_placeholder) #----------
             try:
                 word_placeholder_as_int = int(word_placeholder)
-                if word_placeholder_as_int <= embeddings_count:
+                if word_placeholder_as_int < embeddings_count:
                     if args.normalize_embeddings:
-                        embedding_weights[word_placeholder, :] = w2v_handler.norm(
-                            word_embeddings_model.get_vec(word_placeholder))
+                        embedding_weights[word_placeholder_as_int, :] = w2v_handler.norm(word_embeddings_model.get_vec(word_placeholder))
                     else:
-                        embedding_weights[word_placeholder, :] = word_embeddings_model.get_vec(word_placeholder)
+                        embedding_weights[word_placeholder_as_int, :] = word_embeddings_model.get_vec(word_placeholder)
             except ValueError:
                 pass
         word_weights = [embedding_weights]
@@ -295,16 +297,16 @@ if __name__ == "__main__":
         print('Extracting lemma embeddings from the embeddings model ...')
         embeddings_count = max(X_lemma_max_value + 1, len(lemma_embeddings_model.get_vocab()) + 1)
         embedding_weights = np.zeros((embeddings_count, lemma_embeddings_dim))
+        #embedding_weights = np.random.rand(embeddings_count, lemma_embeddings_dim)
         for word_placeholder in lemma_embeddings_model.get_vocab():
             # print(word_placeholder) #----------
             try:
                 word_placeholder_as_int = int(word_placeholder)
-                if word_placeholder_as_int <= embeddings_count:
+                if word_placeholder_as_int < embeddings_count:
                     if args.normalize_embeddings:
-                        embedding_weights[word_placeholder, :] = w2v_handler.norm(
-                            lemma_embeddings_model.get_vec(word_placeholder))
+                        embedding_weights[word_placeholder_as_int, :] = w2v_handler.norm(lemma_embeddings_model.get_vec(word_placeholder))
                     else:
-                        embedding_weights[word_placeholder, :] = lemma_embeddings_model.get_vec(word_placeholder)
+                        embedding_weights[word_placeholder_as_int, :] = lemma_embeddings_model.get_vec(word_placeholder)
             except ValueError:
                 pass
         lemma_weights = [embedding_weights]
@@ -314,16 +316,16 @@ if __name__ == "__main__":
         print('Extracting PoS embeddings from the embeddings model ...')
         embeddings_count = max(X_pos_max_value + 1, len(pos_embeddings_model.get_vocab()) + 1)
         embedding_weights = np.zeros((embeddings_count, pos_embeddings_dim))
+        #embedding_weights = np.random.rand(embeddings_count, pos_embeddings_dim)
         for word_placeholder in pos_embeddings_model.get_vocab():
             # print(word_placeholder) #----------
             try:
                 word_placeholder_as_int = int(word_placeholder)
-                if word_placeholder_as_int <= embeddings_count:
+                if word_placeholder_as_int < embeddings_count:
                     if args.normalize_embeddings:
-                        embedding_weights[word_placeholder, :] = w2v_handler.norm(
-                            pos_embeddings_model.get_vec(word_placeholder))
+                        embedding_weights[word_placeholder_as_int, :] = w2v_handler.norm(pos_embeddings_model.get_vec(word_placeholder))
                     else:
-                        embedding_weights[word_placeholder, :] = pos_embeddings_model.get_vec(word_placeholder)
+                        embedding_weights[word_placeholder_as_int, :] = pos_embeddings_model.get_vec(word_placeholder)
             except ValueError:
                 pass
         pos_weights = [embedding_weights]
@@ -336,17 +338,17 @@ if __name__ == "__main__":
     # word + lemma + pos
     word_model = Sequential()
     word_model.add(Embedding(input_dim=X_word_max_value + 1, output_dim=word_embeddings_dim, input_length=X_used_row_len, weights=word_weights, dropout=0.2, trainable=True, mask_zero=True))
-    word_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
+    word_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.01))
     #word_model.add(Bidirectional(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2)))
 
     lemma_model = Sequential()
     lemma_model.add(Embedding(input_dim=X_lemma_max_value + 1, output_dim=lemma_embeddings_dim, input_length=X_used_row_len, weights=lemma_weights, dropout=0.2, trainable=True, mask_zero=True))
-    lemma_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
+    lemma_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.01))
     #lemma_model.add(Bidirectional(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2)))
 
     pos_model = Sequential()
     pos_model.add(Embedding(input_dim=X_pos_max_value + 1, output_dim=pos_embeddings_dim, input_length=X_used_row_len, weights=pos_weights, dropout=0.2, trainable=True, mask_zero=True))
-    pos_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2))
+    pos_model.add(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.01))
     #pos_model.add(Bidirectional(LSTM(output_dim=lstm_out_dim, dropout_W=0.2, dropout_U=0.2)))
 
     merged = Merge([word_model, lemma_model, pos_model], mode='concat')
@@ -375,17 +377,26 @@ if __name__ == "__main__":
     # From https://keras.io/getting-started/sequential-model-guide : For a multi-class classification problem, use: model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
 
+    # Load existing model to continue training
+    if len(args.load_model) > 0:
+        print('\nLoading a existing model ...')
+        final_model = load_model(args.load_model)
+
+
     print('\nTrain ...')
 
     # Callbacks
     early_stop = EarlyStopping(monitor='val_loss', patience=5, verbose=1, mode='auto')  # mode='max'
-    save_model_checkpoint = ModelCheckpoint(run_save_folder + '/model.epoch.{epoch:d}.h5', monitor='val_loss',
-                                            verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
+    save_model_checkpoint = ModelCheckpoint(run_save_folder + '/model.epoch.{epoch:d}.h5', monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')
+    #save_model_checkpoint = ModelCheckpoint(run_save_folder + '/model.epoch.{epoch:d}.h5', monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
+
+    #save_model_checkpoint = ModelCheckpoint(run_save_folder + '/model.epoch.{epoch:d}.h5', monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')
 
     # word + lemma + pos
     final_model.fit([train_data_obj.get_X_word_np_array(), train_data_obj.get_X_lemma_np_array(), train_data_obj.get_X_pos_np_array()],
                      train_data_obj.get_y_n_hot_np_array(),
                      batch_size=args.batch_size, nb_epoch=args.nb_epoch, callbacks=[early_stop, file_log, save_model_checkpoint],
+                     #batch_size=args.batch_size, nb_epoch=args.nb_epoch, callbacks=[file_log, save_model_checkpoint],
                      validation_data=([devel_data_obj.get_X_word_np_array(), devel_data_obj.get_X_lemma_np_array(), devel_data_obj.get_X_pos_np_array()], devel_data_obj.get_y_n_hot_np_array()),
                      verbose=args.fit_verbose, shuffle=True)
     """
@@ -397,6 +408,9 @@ if __name__ == "__main__":
                     validation_data=(devel_data_obj.get_X_word_np_array(), devel_data_obj.get_y_n_hot_np_array()),
                     verbose=args.fit_verbose, shuffle=True)
     """
+
+
+
 
     print('\nFinally, evaluate on test data ...')
 
@@ -415,6 +429,12 @@ if __name__ == "__main__":
         file_log.append('\n\n' + res_str)
     """
     #print('Ending ...')
+
+    """
+    print('Saving the final model ...')
+    final_model = run_save_folder + '/model.final.epoch.' + str(args.nb_epoch - 1) + '.h5'
+    final_model.save(filepath=model_filepath)
+    """
 
     #file_log.append('\n\nTest score: %s' % (score))
     #file_log.append('\nTest accuracy: %s' % (acc))
